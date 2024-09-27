@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from db_operations import get_all_customers, add_customer, delete_customer, get_all_orders, get_order_details, \
-    add_product, search_orders, search_customers, get_address, get_contact_person, read_logs
+    add_product, search_orders, search_customers, get_all_products, read_logs
 
 
 # Функция для загрузки и отображения клиентов из БД
@@ -48,25 +48,19 @@ def add_customer_interface():
         messagebox.showerror("Ошибка", "Заполните все поля")
 
 
-# Функция для отображения контактного лица и адреса клиента
-def show_customer_details():
-    selected_item = tree_customers.focus()
-    if selected_item:
-        customer_id = tree_customers.item(selected_item)['values'][0]
+# Создаем функцию, которая будет вызываться при нажатии кнопки
+def fetch_products():
+    products, error = get_all_products()
+    if error:
+        messagebox.showerror("Ошибка", error)
+    else:
+        # Очищаем таблицу перед добавлением новых товаров
+        for row in tree_products.get_children():
+            tree_products.delete(row)
 
-        # Получение контактного лица
-        contact_person, error = get_contact_person(customer_id)
-        if error:
-            messagebox.showerror("Ошибка", error)
-        else:
-            contact_person_label.config(text=f"Контактное лицо: {contact_person[0]} {contact_person[1]}")
-
-        # Получение адреса клиента
-        address, error = get_address(customer_id)
-        if error:
-            messagebox.showerror("Ошибка", error)
-        else:
-            address_label.config(text=f"Адрес: {address[0]}, {address[1]}, {address[2]}, {address[3]}")
+        # Добавляем полученные товары в таблицу
+        for product in products:
+            tree_products.insert('', 'end', values=product)
 
 
 # Функция для чтения и отображения логов в интерфейсе
@@ -346,8 +340,8 @@ for col in columns_customers:
 
 tree_customers.pack(fill="both", expand=True)
 
-# Привязываем действие к выбору клиента в таблице
-tree_customers.bind("<<TreeviewSelect>>", lambda event: show_customer_details())
+# # Привязываем действие к выбору клиента в таблице
+# tree_customers.bind("<<TreeviewSelect>>", lambda event: show_customer_details())
 
 # Поле для удаления клиента
 frame_delete_customer = ttk.LabelFrame(tab_customers, text="Удалить клиента")
@@ -396,8 +390,9 @@ tree_orders.bind("<<TreeviewSelect>>", show_order_details)
 frame_order_details = ttk.LabelFrame(tab_orders, text="Детали заказа")
 frame_order_details.pack(fill="both", expand=True, padx=10, pady=5)
 
-columns_order_details = ("ID", "Товар", "Количество", "Цена")
+columns_order_details = ("ID", "Автор", "Название", "Год издания", "Количество", "Цена")
 tree_order_details = ttk.Treeview(frame_order_details, columns=columns_order_details, show="headings")
+
 for col in columns_order_details:
     tree_order_details.heading(col, text=col)
     tree_order_details.column(col, width=150, anchor='center')
@@ -409,6 +404,9 @@ tree_order_details.pack(fill="both", expand=True)
 # Поля ввода для добавления товара
 frame_add_product = ttk.LabelFrame(tab_products, text="Добавить товар")
 frame_add_product.pack(fill="x", padx=10, pady=5)
+
+btn_fetch_products = ttk.Button(tab_products, text="Выгрузить товары", command=fetch_products)
+btn_fetch_products.pack()
 
 label_author = ttk.Label(frame_add_product, text="Автор:")
 label_author.grid(row=0, column=0, padx=5, pady=5, sticky='e')
@@ -440,13 +438,13 @@ label_description.grid(row=4, column=0, padx=5, pady=5, sticky='e')
 entry_description = ttk.Entry(frame_add_product, width=30)
 entry_description.grid(row=4, column=1, padx=5, pady=5)
 
-# Поле для выбора доставки
-label_delivery = ttk.Label(frame_add_product, text="Доставка:")
-label_delivery.grid(row=5, column=0, padx=5, pady=5, sticky='e')
-
-delivery_var = tk.BooleanVar(value=False)  # Переменная для хранения состояния доставки (по умолчанию False)
-check_delivery = ttk.Checkbutton(frame_add_product, variable=delivery_var, text="Доступна доставка")
-check_delivery.grid(row=5, column=1, padx=5, pady=5)
+# # Поле для выбора доставки
+# label_delivery = ttk.Label(frame_add_product, text="Доставка:")
+# label_delivery.grid(row=5, column=0, padx=5, pady=5, sticky='e')
+#
+# delivery_var = tk.BooleanVar(value=False)  # Переменная для хранения состояния доставки (по умолчанию False)
+# check_delivery = ttk.Checkbutton(frame_add_product, variable=delivery_var, text="Доступна доставка")
+# check_delivery.grid(row=5, column=1, padx=5, pady=5)
 
 # Кнопка для добавления товара
 button_add_product = ttk.Button(frame_add_product, text="Добавить товар", command=add_product_interface)

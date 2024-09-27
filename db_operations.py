@@ -174,7 +174,7 @@ def get_all_orders():
             conn.close()
 
 
-#
+# checked
 def get_order_details(order_id):
     try:
         conn = connect_db()
@@ -182,7 +182,7 @@ def get_order_details(order_id):
             return None, "Ошибка подключения к базе данных"
         cursor = conn.cursor()
         query = """
-            SELECT Order_items.id, Products.description, Order_items.quantity, Order_items.price
+            SELECT Order_items.id, Products.author, Products.title, Products.year_of_publication, Order_items.quantity, Order_items.price
             FROM Order_items
             JOIN Products ON Order_items.product_id = Products.id
             WHERE Order_items.order_id = %s
@@ -202,8 +202,8 @@ def get_order_details(order_id):
             conn.close()
 
 
-# Функция для добавления товара
-def add_product(price, description, delivery):
+# checked
+def add_product(price, description, delivery=False):
     try:
         conn = connect_db()
         if conn is None:
@@ -217,17 +217,19 @@ def add_product(price, description, delivery):
 
         logging.info(f"Товар '{description}' добавлен успешно")
         return "Товар добавлен!"
+
     except Exception as e:
         logging.error(f"Ошибка при добавлении товара: {e}")
         return str(e)
+
     finally:
         if cursor:
-            cursor.close()  # Закрываем курсор
+            cursor.close()
         if conn:
-            conn.close()  # Закрываем соединение
+            conn.close()
 
 
-# Функция для поиска заказов по номеру или названию товара
+# checked
 def search_orders(search_query):
     try:
         conn = connect_db()
@@ -248,12 +250,13 @@ def search_orders(search_query):
         cursor.execute(query, (search_query, search_query))
         orders = cursor.fetchall()
 
-
         logging.info(f"Найдено {len(orders)} заказов по запросу: {search_query}")
         return orders, None
+
     except Exception as e:
         logging.error(f"Ошибка при поиске заказов: {e}")
         return None, str(e)
+
     finally:
         if cursor:
             cursor.close()
@@ -261,27 +264,26 @@ def search_orders(search_query):
             conn.close()
 
 
-# Функция для получения контактного лица клиента
-def get_contact_person(customer_id):
+# checked
+def get_all_products():
     try:
         conn = connect_db()
         if conn is None:
             return None, "Ошибка подключения к базе данных"
 
         cursor = conn.cursor()
-        query = """
-            SELECT Contact.first_name, Contact.last_name 
-            FROM Contact 
-            JOIN Customers ON Customers.contact_person_id = Contact.id 
-            WHERE Customers.id = %s
-        """
-        cursor.execute(query, (customer_id,))
-        contact_person = cursor.fetchone()
+        query = "SELECT id, author, title, year_of_publication, price, description, delivery FROM Products;"
 
-        return contact_person, None
+        cursor.execute(query)
+        products = cursor.fetchall()
+
+        logging.info(f"Найдено {len(products)}")
+        return products, None
+
     except Exception as e:
-        logging.error(f"Ошибка при получении контактного лица для клиента {customer_id}: {e}")
+        logging.error(f"Ошибка при выборке товаров: {e}")
         return None, str(e)
+
     finally:
         if cursor:
             cursor.close()
@@ -289,34 +291,37 @@ def get_contact_person(customer_id):
             conn.close()
 
 
-# Функция для получения адреса клиента
-def get_address(customer_id):
-    try:
-        conn = connect_db()
-        if conn is None:
-            return None, "Ошибка подключения к базе данных"
 
-        cursor = conn.cursor()
-        query = """
-            SELECT Cities.name, Streets.name, Address.building, Address.zip_code 
-            FROM Address
-            JOIN Customers ON Customers.address_id = Address.id
-            JOIN Cities ON Address.city = Cities.id
-            JOIN Streets ON Address.street = Streets.id
-            WHERE Customers.id = %s
-        """
-        cursor.execute(query, (customer_id,))
-        address = cursor.fetchone()
 
-        return address, None
-    except Exception as e:
-        logging.error(f"Ошибка при получении адреса для клиента {customer_id}: {e}")
-        return None, str(e)
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+
+# # Функция для получения адреса клиента
+# def get_address(customer_id):
+#     try:
+#         conn = connect_db()
+#         if conn is None:
+#             return None, "Ошибка подключения к базе данных"
+#
+#         cursor = conn.cursor()
+#         query = """
+#             SELECT Cities.name, Streets.name, Address.building, Address.zip_code
+#             FROM Address
+#             JOIN Customers ON Customers.address_id = Address.id
+#             JOIN Cities ON Address.city = Cities.id
+#             JOIN Streets ON Address.street = Streets.id
+#             WHERE Customers.id = %s
+#         """
+#         cursor.execute(query, (customer_id,))
+#         address = cursor.fetchone()
+#
+#         return address, None
+#     except Exception as e:
+#         logging.error(f"Ошибка при получении адреса для клиента {customer_id}: {e}")
+#         return None, str(e)
+#     finally:
+#         if cursor:
+#             cursor.close()
+#         if conn:
+#             conn.close()
 
 
 # Функция для чтения логов из файла
