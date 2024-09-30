@@ -203,33 +203,6 @@ def get_order_details(order_id):
 
 
 # checked
-def add_product(price, description, delivery=False):
-    try:
-        conn = connect_db()
-        if conn is None:
-            return "Ошибка подключения к базе данных"
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO Products (price, description, delivery) VALUES (%s, %s, %s)",
-            (price, description, delivery)
-        )
-        conn.commit()
-
-        logging.info(f"Товар '{description}' добавлен успешно")
-        return "Товар добавлен!"
-
-    except Exception as e:
-        logging.error(f"Ошибка при добавлении товара: {e}")
-        return str(e)
-
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-# checked
 def search_orders(search_query):
     try:
         conn = connect_db()
@@ -265,6 +238,35 @@ def search_orders(search_query):
 
 
 # checked
+def add_product(author, title, year_of_pub, price, description):
+    try:
+        conn = connect_db()
+        if conn is None:
+            return "Ошибка подключения к базе данных"
+        cursor = conn.cursor()
+
+        query = "INSERT INTO Products (author, title, year_of_publication, price, description) VALUES (%s, %s, %s, %s, %s)"
+        cursor.execute(
+            query,
+            (author, title, year_of_pub, price, description)
+        )
+        conn.commit()
+
+        logging.info(f"Товар '{description}' добавлен успешно")
+        return "Товар добавлен!"
+
+    except Exception as e:
+        logging.error(f"Ошибка при добавлении товара: {e}")
+        return str(e)
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+# checked
 def get_all_products():
     try:
         conn = connect_db()
@@ -291,40 +293,7 @@ def get_all_products():
             conn.close()
 
 
-
-
-
-# # Функция для получения адреса клиента
-# def get_address(customer_id):
-#     try:
-#         conn = connect_db()
-#         if conn is None:
-#             return None, "Ошибка подключения к базе данных"
-#
-#         cursor = conn.cursor()
-#         query = """
-#             SELECT Cities.name, Streets.name, Address.building, Address.zip_code
-#             FROM Address
-#             JOIN Customers ON Customers.address_id = Address.id
-#             JOIN Cities ON Address.city = Cities.id
-#             JOIN Streets ON Address.street = Streets.id
-#             WHERE Customers.id = %s
-#         """
-#         cursor.execute(query, (customer_id,))
-#         address = cursor.fetchone()
-#
-#         return address, None
-#     except Exception as e:
-#         logging.error(f"Ошибка при получении адреса для клиента {customer_id}: {e}")
-#         return None, str(e)
-#     finally:
-#         if cursor:
-#             cursor.close()
-#         if conn:
-#             conn.close()
-
-
-# Функция для чтения логов из файла
+# checked
 def read_logs():
     try:
         conn = connect_db()
@@ -335,17 +304,18 @@ def read_logs():
 
         # Обновляем запрос для извлечения нового поля details
         query = """
-        SELECT log_id, customer_id, log_date, details
+        SELECT id, log_date, activity, details
         FROM Customer_Activity_Log
         ORDER BY log_date DESC;
         """
         cursor.execute(query)
         logs = cursor.fetchall()
 
-        return logs
+        return logs, None
 
     except Exception as e:
-        return str(e)
+        return None, str(e)
+
     finally:
         if cursor:
             cursor.close()

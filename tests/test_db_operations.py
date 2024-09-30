@@ -3,7 +3,7 @@ from unittest.mock import mock_open
 
 import pytest
 from db_operations import add_customer, search_customers, delete_customer, get_all_customers, get_all_orders, \
-    get_order_details, add_product, search_orders, get_all_products
+    get_order_details, add_product, search_orders, get_all_products, read_logs
 
 
 @mock.patch('psycopg2.connect')
@@ -439,6 +439,96 @@ def test_get_all_products_error(mock_connect):
 
     assert products is None
     assert "Ошибка выполнения запроса" in error
+
+    mock_cursor.close.assert_called_once()
+    mock_connection.close.assert_called_once()
+
+
+# @mock.patch('psycopg2.connect')
+# def test_get_all_logs_success(mock_connect):
+#     mock_connection = mock.Mock()
+#     mock_cursor = mock.Mock()
+#
+#     mock_connect.return_value = mock_connection
+#     mock_connection.cursor.return_value = mock_cursor
+#
+#     mock_cursor.fetchall.return_value = [
+#         (1, 1, '2024-09-25', 'INFO', 'Добавлен новый клиент'),
+#         (2, 2, '2024-09-24', 'WARNING', 'Обновлены данные клиента')
+#     ]
+#
+#     logs, error = read_logs()
+#     query = "SELECT id, customer_id, log_date, activity, details FROM Customer_Activity_Log ORDER BY log_date DESC"
+#
+#     execute_calls = mock_cursor.execute.call_args_list
+#     query_found = any(query in call[0][0] for call in execute_calls)
+#
+#     expected_logs = [
+#         (1, 1, '2024-09-25', 'INFO', 'Добавлен новый клиент'),
+#         (2, 2, '2024-09-24', 'WARNING', 'Обновлены данные клиента')
+#     ]
+#
+#     assert query_found, "Запрос на выборку логов не найден."
+#     assert logs == expected_logs
+#     assert error is None
+#
+#     mock_cursor.close.assert_called_once()
+#     mock_connection.close.assert_called_once()
+
+
+@mock.patch('psycopg2.connect')
+def test_get_all_logs_success(mock_connect):
+    mock_connection = mock.Mock()
+    mock_cursor = mock.Mock()
+
+    mock_connect.return_value = mock_connection
+    mock_connection.cursor.return_value = mock_cursor
+
+    mock_cursor.fetchall.return_value = [
+        (1, '2024-09-25', 'INFO', 'Добавлен новый клиент'),
+        (2, '2024-09-24', 'WARNING', 'Обновлены данные клиента')
+    ]
+
+    logs, error = read_logs()
+
+    query_fragments = [
+        "SELECT id, log_date, activity, details",
+        "FROM Customer_Activity_Log",
+        "ORDER BY log_date DESC"
+    ]
+
+    execute_calls = mock_cursor.execute.call_args_list
+    for fragment in query_fragments:
+        # Используем strip() и replace('\n', '') для устранения проблем с форматированием
+        fragment_found = any(
+            fragment.strip().replace('\n', ' ') in call[0][0].strip().replace('\n', ' ') for call in execute_calls)
+        assert fragment_found, f"Фрагмент запроса '{fragment}' не найден в SQL-запросе"
+
+    assert logs == [
+        (1, '2024-09-25', 'INFO', 'Добавлен новый клиент'),
+        (2, '2024-09-24', 'WARNING', 'Обновлены данные клиента')
+    ]
+
+    assert error is None
+
+    mock_cursor.close.assert_called_once()
+    mock_connection.close.assert_called_once()
+
+
+
+@mock.patch('psycopg2.connect')
+def test_get_all_logs_error(mock_connect):
+    mock_connection = mock.Mock()
+    mock_cursor = mock.Mock()
+
+    mock_connect.return_value = mock_connection
+    mock_connection.cursor.return_value = mock_cursor
+
+    mock_cursor.execute.side_effect = Exception("Ошибка подключения к базе данных")
+    logs, error = read_logs()
+
+    assert logs is None
+    assert "Ошибка подключения к базе данных" in error
 
     mock_cursor.close.assert_called_once()
     mock_connection.close.assert_called_once()

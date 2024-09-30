@@ -51,30 +51,56 @@ def add_customer_interface():
 # Создаем функцию, которая будет вызываться при нажатии кнопки
 def fetch_products():
     products, error = get_all_products()
+
     if error:
-        messagebox.showerror("Ошибка", error)
+        error_label.config(text=f"Ошибка: {error}")
+        return
     else:
         # Очищаем таблицу перед добавлением новых товаров
         for row in tree_products.get_children():
             tree_products.delete(row)
 
         # Добавляем полученные товары в таблицу
-        for product in products:
-            tree_products.insert('', 'end', values=product)
+        if products:
+            for product in products:
+                tree_products.insert('', 'end', values=product)
+        else:
+            error_label.config(text="Нет доступных товаров")
 
 
 # Функция для чтения и отображения логов в интерфейсе
 def load_logs_interface():
-    logs = read_logs()
+    logs, error = read_logs()  # Получаем логи из базы данных
 
-    # Очищаем старые записи
+    if error:
+        # Если есть ошибка, отображаем её в метке
+        error_label.config(text=f"Ошибка: {error}")
+        return
+
+    # Очищаем старые записи из таблицы
     for row in tree_logs.get_children():
         tree_logs.delete(row)
 
-    # Добавляем новые логи в таблицу, включая детали
+    if logs:
+        # Добавляем новые логи в таблицу
+        for log in logs:
+            tree_logs.insert('', 'end', values=(log[0], log[1], log[2], log[3]))  # Вставляем значения
+    else:
+        error_label.config(text="Нет доступных логов")
+
+
+def show_logs():
+    logs, error = read_logs()
+
+    if error:
+        error_label.config(text=f"Ошибка: {error}")
+        return
+
+    for item in logs_tree.get_children():
+        logs_tree.delete(item)
+
     for log in logs:
-        # log = (log_id, customer_id, operation, log_date, details)
-        tree_logs.insert('', 'end', values=log)
+        logs_tree.insert("", "end", values=log)
 
 
 # Функция для поиска клиентов через интерфейс
@@ -156,6 +182,25 @@ def show_order_details(event):
                 tree_order_details.insert('', 'end', values=item)
 
 
+def load_products_interface():
+    products, error = get_all_products()  # Получаем товары из базы данных
+
+    if error:
+        error_label.config(text=f"Ошибка: {error}")
+        return
+
+    # Очищаем старые записи из таблицы
+    for row in tree_products.get_children():
+        tree_products.delete(row)
+
+    # Если есть товары, добавляем их в таблицу
+    if products:
+        for product in products:
+            tree_products.insert('', 'end', values=(product[0], product[1], product[2], product[3]))  # Вставляем значения
+    else:
+        error_label.config(text="Нет доступных товаров")
+
+
 # Функция для добавления товара через интерфейс
 def add_product_interface():
     author = entry_author.get()
@@ -163,7 +208,6 @@ def add_product_interface():
     year_of_publication = entry_year_of_publication.get()
     price = entry_price.get()
     description = entry_description.get()
-    delivery = delivery_var.get()  # Переменная для состояния доставки
 
     # Проверяем обязательные поля
     if not author or not title or not price:
@@ -188,7 +232,7 @@ def add_product_interface():
         return
 
     # Вызов функции для добавления товара в базу данных
-    result = add_product(author, title, year_of_publication, price, description, delivery)
+    result = add_product(author, title, year_of_publication, price, description)
     if "Ошибка" in result:
         messagebox.showerror("Ошибка", result)
     else:
@@ -469,7 +513,7 @@ frame_logs = ttk.LabelFrame(tab_logs, text="Логи приложения")
 frame_logs.pack(fill="both", expand=True, padx=10, pady=5)
 
 # Обновляем колонки для включения нового поля details
-columns_logs = ("ID", "Клиент", "Операция", "Дата и время", "Детали")
+columns_logs = ("ID", "Дата и время", "Операция", "Детали")
 tree_logs = ttk.Treeview(frame_logs, columns=columns_logs, show="headings")
 for col in columns_logs:
     tree_logs.heading(col, text=col)
@@ -480,6 +524,11 @@ tree_logs.pack(fill="both", expand=True)
 # Кнопка для загрузки логов
 button_load_logs = ttk.Button(tab_logs, text="Загрузить логи", command=load_logs_interface)
 button_load_logs.pack(pady=5)
+
+
+# Добавляем метку для отображения ошибок
+error_label = tk.Label(root, text="", fg="red")
+error_label.pack()
 
 if __name__ == '__main__':
     root.mainloop()
