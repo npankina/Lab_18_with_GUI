@@ -1,7 +1,6 @@
-from operator import ifloordiv
-
 import psycopg2
 import logging
+
 
 # Настраиваем логгер
 logging.basicConfig(
@@ -51,6 +50,7 @@ def add_customer(company_name, phone, first_name, last_name, city, street, build
         cursor.execute(customer_query, (company_name, address_id, phone, first_name, last_name))
         conn.commit()
         logging.info(f"Клиент '{company_name}' добавлен успешно")
+
         return "Клиент добавлен!"
 
     except Exception as e:
@@ -238,27 +238,24 @@ def search_orders(search_query):
 
 
 # checked
-def add_product(author, title, year_of_pub, price, description):
+def add_product(author, title, year_of_publication, price, description):
     try:
         conn = connect_db()
         if conn is None:
-            return "Ошибка подключения к базе данных"
+            return None, "Ошибка подключения к базе данных"
         cursor = conn.cursor()
 
-        query = "INSERT INTO Products (author, title, year_of_publication, price, description) VALUES (%s, %s, %s, %s, %s)"
         cursor.execute(
-            query,
-            (author, title, year_of_pub, price, description)
+            "INSERT INTO Products (author, title, year_of_publication, price, description) VALUES (%s, %s, %s, %s, %s)",
+            (author, title, year_of_publication, price, description)
         )
         conn.commit()
 
-        logging.info(f"Товар '{description}' добавлен успешно")
-        return "Товар добавлен!"
-
+        logging.info(f"Товар '{title}' добавлен успешно")
+        return "Продукт успешно добавлен", None
     except Exception as e:
-        logging.error(f"Ошибка при добавлении товара: {e}")
-        return str(e)
-
+        logging.error(f"Ошибка при добавлении продукта: {e}")
+        return None, str(e)
     finally:
         if cursor:
             cursor.close()

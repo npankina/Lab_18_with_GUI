@@ -89,20 +89,6 @@ def load_logs_interface():
         error_label.config(text="Нет доступных логов")
 
 
-def show_logs():
-    logs, error = read_logs()
-
-    if error:
-        error_label.config(text=f"Ошибка: {error}")
-        return
-
-    for item in logs_tree.get_children():
-        logs_tree.delete(item)
-
-    for log in logs:
-        logs_tree.insert("", "end", values=log)
-
-
 # Функция для поиска клиентов через интерфейс
 def search_customers_interface():
     search_query = entry_search.get()
@@ -182,6 +168,7 @@ def show_order_details(event):
                 tree_order_details.insert('', 'end', values=item)
 
 
+# Функция для отображения товаров
 def load_products_interface():
     products, error = get_all_products()  # Получаем товары из базы данных
 
@@ -201,7 +188,6 @@ def load_products_interface():
         error_label.config(text="Нет доступных товаров")
 
 
-# Функция для добавления товара через интерфейс
 def add_product_interface():
     author = entry_author.get()
     title = entry_title.get()
@@ -209,22 +195,39 @@ def add_product_interface():
     price = entry_price.get()
     description = entry_description.get()
 
-    # Проверяем обязательные поля
-    if not author or not title or not price:
-        messagebox.showerror("Ошибка", "Заполните обязательные поля: автор, наименование, цена")
+    # Список для незаполненных полей
+    missing_fields = []
+
+    # Проверяем обязательные поля и добавляем их в список незаполненных
+    if not author:
+        missing_fields.append("Автор")
+    if not title:
+        missing_fields.append("Наименование")
+    if not price:
+        missing_fields.append("Цена")
+
+    # Если есть незаполненные поля, выводим соответствующее сообщение
+    if missing_fields:
+        messagebox.showerror("Ошибка", f"Заполните обязательные поля: {', '.join(missing_fields)}")
         return
 
     try:
         # Преобразование цены в число
         price = float(price)
+        if price <= 0:
+            messagebox.showerror("Ошибка", "Цена должна быть больше 0")
+            return
     except ValueError:
         messagebox.showerror("Ошибка", "Цена должна быть числом")
         return
 
     try:
-        # Преобразование года в целое число
+        # Преобразование года в целое число и проверка, что он не меньше 1900
         if year_of_publication:
             year_of_publication = int(year_of_publication)
+            if year_of_publication < 1900:
+                messagebox.showerror("Ошибка", "Год издания не может быть меньше 1900")
+                return
         else:
             year_of_publication = None  # Если год не указан
     except ValueError:
@@ -232,11 +235,13 @@ def add_product_interface():
         return
 
     # Вызов функции для добавления товара в базу данных
-    result = add_product(author, title, year_of_publication, price, description)
-    if "Ошибка" in result:
-        messagebox.showerror("Ошибка", result)
+    result, error = add_product(author, title, year_of_publication, price, description)
+
+    # Если есть ошибка, выводим её
+    if error:
+        messagebox.showerror("Ошибка", error)
     else:
-        messagebox.showinfo("Успех", "Товар успешно добавлен")
+        messagebox.showinfo("Успех", result)
         # Очистка полей после добавления
         entry_author.delete(0, tk.END)
         entry_title.delete(0, tk.END)
@@ -244,22 +249,6 @@ def add_product_interface():
         entry_price.delete(0, tk.END)
         entry_description.delete(0, tk.END)
 
-# Функция для поиска заказов через интерфейс
-def search_orders_interface():
-    search_query = entry_search_orders.get()
-    if search_query:
-        orders, error = search_orders(search_query)
-        if error:
-            messagebox.showerror("Ошибка", error)
-        else:
-            # Очищаем таблицу перед добавлением результатов поиска
-            for row in tree_orders.get_children():
-                tree_orders.delete(row)
-            # Добавляем результаты поиска в таблицу
-            for order in orders:
-                tree_orders.insert('', 'end', values=order)
-    else:
-        messagebox.showerror("Ошибка", "Введите поисковый запрос")
 
 
 ### Создание основного окна приложения ###
@@ -384,9 +373,6 @@ for col in columns_customers:
 
 tree_customers.pack(fill="both", expand=True)
 
-# # Привязываем действие к выбору клиента в таблице
-# tree_customers.bind("<<TreeviewSelect>>", lambda event: show_customer_details())
-
 # Поле для удаления клиента
 frame_delete_customer = ttk.LabelFrame(tab_customers, text="Удалить клиента")
 frame_delete_customer.pack(fill="x", padx=10, pady=5)
@@ -402,16 +388,6 @@ button_delete_customer.grid(row=1, column=0, columnspan=2, pady=10)
 
 
 ### Добавление элементов во вкладку "Заказы" ###
-
-# Поле для поиска заказов
-frame_search_orders = ttk.LabelFrame(tab_orders, text="Поиск заказов")
-frame_search_orders.pack(fill="x", padx=10, pady=5)
-
-entry_search_orders = ttk.Entry(frame_search_orders, width=50)
-entry_search_orders.grid(row=0, column=0, padx=5, pady=5)
-
-button_search_orders = ttk.Button(frame_search_orders, text="Поиск заказов", command=search_orders_interface)
-button_search_orders.grid(row=0, column=1, padx=5, pady=5)
 
 # Добавляем кнопку для получения заказов
 button_load_orders = ttk.Button(tab_orders, text="Выгрузить заказы", command=load_orders)
@@ -481,14 +457,6 @@ label_description.grid(row=4, column=0, padx=5, pady=5, sticky='e')
 
 entry_description = ttk.Entry(frame_add_product, width=30)
 entry_description.grid(row=4, column=1, padx=5, pady=5)
-
-# # Поле для выбора доставки
-# label_delivery = ttk.Label(frame_add_product, text="Доставка:")
-# label_delivery.grid(row=5, column=0, padx=5, pady=5, sticky='e')
-#
-# delivery_var = tk.BooleanVar(value=False)  # Переменная для хранения состояния доставки (по умолчанию False)
-# check_delivery = ttk.Checkbutton(frame_add_product, variable=delivery_var, text="Доступна доставка")
-# check_delivery.grid(row=5, column=1, padx=5, pady=5)
 
 # Кнопка для добавления товара
 button_add_product = ttk.Button(frame_add_product, text="Добавить товар", command=add_product_interface)

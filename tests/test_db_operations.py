@@ -319,20 +319,21 @@ def test_add_product_success(mock_connect):
     mock_connect.return_value = mock_connection
     mock_connection.cursor.return_value = mock_cursor
 
-    result = add_product(500.00, "Продукт 1", True)
+    result, error = add_product("Автор 1", "Название 1", 1900, 500.00, "Продукт 1")
 
     execute_calls = mock_cursor.execute.call_args_list
-    query_part = "INSERT INTO Products (price, description, delivery)"
-    query_found = any(query_part in call[0][0] for call in execute_calls)
+    query_fragments = [
+        "INSERT INTO Products",
+        "(author, title, year_of_publication, price, description)",
+        "VALUES (%s, %s, %s, %s, %s)"
+    ]
 
-    assert query_found, "SQL-запрос на добавление продукта не был найден."
-
-    mock_cursor.execute.assert_called_once_with(
-        "INSERT INTO Products (price, description, delivery) VALUES (%s, %s, %s)",
-        (500.00, "Продукт 1", True)
-    )
+    for fragment in query_fragments:
+        query_found = any(fragment in call[0][0] for call in execute_calls)
+        assert query_found, f"Фрагмент '{fragment}' не найден в SQL-запросе"
 
     assert result == "Товар добавлен!"
+    assert error is None
 
     mock_cursor.close.assert_called_once()
     mock_connection.close.assert_called_once()
@@ -348,7 +349,7 @@ def test_add_product_error(mock_connect):
 
     mock_cursor.execute.side_effect = Exception("Ошибка SQL-запроса")
 
-    result = add_product(500.00, "Продукт 1", True)
+    result = add_product("Автор 1", "Название 1", 1900, 500.00, "Продукт 1")
 
     assert "Ошибка SQL-запроса" in result
 
